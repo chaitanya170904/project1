@@ -37,6 +37,44 @@ class _LoginPageState extends State<LoginPage> {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(child: CircularProgressIndicator());
+          },
+        );
+
+        // TODO: Replace this with your actual login API call
+        await Future.delayed(const Duration(seconds: 2)); // Simulating API call
+        
+        // Close loading indicator
+        Navigator.of(context).pop();
+
+        // Navigate to WelcomePage
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => WelcomePage(email: _email),
+          ),
+        );
+      } catch (e) {
+        // Close loading indicator
+        Navigator.of(context).pop();
+
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,29 +116,18 @@ class _LoginPageState extends State<LoginPage> {
                 onSaved: (value) => _password = value!,
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _formKey.currentState!.save();
-                        // TODO: Implement login logic
-                        print('Email: $_email, Password: $_password');
-                      }
-                    },
-                    child: const Text('Login'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SignupPage()),
-                      );
-                    },
-                    child: const Text('Sign Up'),
-                  ),
-                ],
+              ElevatedButton(
+                onPressed: _login,
+                child: const Text('Login'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignupPage()),
+                  );
+                },
+                child: const Text('Sign Up'),
               ),
             ],
           ),
@@ -119,6 +146,7 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
   String _email = '';
   String _password = '';
   String _confirmPassword = '';
@@ -126,6 +154,69 @@ class _SignupPageState extends State<SignupPage> {
   // Add this method for email validation
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _showSuccessBanner() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Signup Successful!',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.fixed,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _signUp() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(child: CircularProgressIndicator());
+          },
+        );
+
+        // TODO: Replace this with your actual API call
+        await Future.delayed(const Duration(seconds: 2)); // Simulating API call
+        
+        // Close loading indicator
+        Navigator.of(context).pop();
+
+        // Show success banner
+        _showSuccessBanner();
+
+        // Wait for a moment to let the user see the banner
+        await Future.delayed(const Duration(seconds: 1));
+
+        // Navigate back to the login page
+        Navigator.of(context).pop();
+      } catch (e) {
+        // Close loading indicator
+        Navigator.of(context).pop();
+
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Signup failed: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -155,6 +246,7 @@ class _SignupPageState extends State<SignupPage> {
                 onSaved: (value) => _email = value!,
               ),
               TextFormField(
+                controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (value) {
@@ -175,7 +267,7 @@ class _SignupPageState extends State<SignupPage> {
                   if (value == null || value.isEmpty) {
                     return 'Please confirm your password';
                   }
-                  if (value != _password) {
+                  if (value != _passwordController.text) {
                     return 'Passwords do not match';
                   }
                   return null;
@@ -184,17 +276,45 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    // TODO: Implement signup logic
-                    print('Email: $_email, Password: $_password');
-                  }
-                },
+                onPressed: _signUp,
                 child: const Text('Sign Up'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class WelcomePage extends StatelessWidget {
+  final String email;
+
+  const WelcomePage({Key? key, required this.email}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Welcome'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Welcome, $email!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Log out functionality
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: const Text('Log Out'),
+            ),
+          ],
         ),
       ),
     );
